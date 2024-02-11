@@ -7,9 +7,21 @@ import zipfile
 import io
 
 
+def check_dependency(command):
+    try:
+        subprocess.run(command, check=True, shell=True)
+        print(f"Dependency '{command}' is installed.")
+        return True
+    except subprocess.CalledProcessError:
+        print(f"Dependency '{command}' is not installed.")
+        return False
+
+
 def download_sql():
     zip_file_url = "https://www.sqlite.org/2018/sqlite-amalgamation-3260000.zip"
+    print("Downloading sqlite archive...")
     r = requests.get(zip_file_url)
+    print("Extracting sqlite archive")
     z = zipfile.ZipFile(io.BytesIO(r.content))
     z.extractall()
     os.rename("sqlite-amalgamation-3260000", "sqlite_build")
@@ -58,6 +70,29 @@ CMD ["bash"]"""
         dockerfile.write(dockerfile_content)
 
 
+def create_virtual_machine():
+    iso_file_url = "https://mirror.yandex.ru/centos/7/isos/x86_64/CentOS-7-x86_64-Minimal-2009.iso"
+    print("Downloading CentOS-7-x86_64-Minimal-2009.iso...")
+    requests.get(iso_file_url)
+
+    vboxmanage_commands = [
+        "vboxmanage createvm --name CentOS-VM --ostype RedHat_64 --register",
+        "vboxmanage modifyvm CentOS-VM --memory 1024 --vram 16",
+        "vboxmanage createhd --filename CentOS-VM.vdi --size 20480",
+        "vboxmanage storagectl CentOS-VM --name SATA --add sata --controller IntelAHCI",
+        "vboxmanage storageattach CentOS-VM --storagectl SATA --port 0 --device 0 --type hdd --medium CentOS-VM.vdi",
+        "vboxmanage storagectl CentOS-VM --name IDE --add ide --controller PIIX4",
+        "vboxmanage storageattach CentOS-VM --storagectl IDE --port 1 --device 0 --type dvddrive --medium CentOS-7-x86_64-Minimal-2009.iso",
+        "vboxmanage modifyvm CentOS-VM --boot1 dvd --boot2 disk --boot3 none --boot4 none",
+        "vboxmanage modifyvm CentOS-VM --nic1 nat",
+        "vboxmanage modifyvm CentOS-VM --audio none",
+        "vboxmanage startvm CentOS-VM"
+    ]
+
+    for command in vboxmanage_commands:
+        subprocess.run(command, shell=True)
+
+
 def job(is_linux_build=True):
     print("Starting the job")
     print("Downloading sqlite archive")
@@ -77,8 +112,21 @@ def job(is_linux_build=True):
     print("Creating Dockerfile")
     create_docker_file()
 
+    print("Creating virtual machine")
+    create_virtual_machine()
+
 
 if __name__ == '__main__':
+    if check_dependency("apt --version"):
+        # Check for Python3-requests
+        check_dependency("apt-get install python3-requests -y")
+
+        # Check for CMake
+        check_dependency("apt install cmake -y")
+
+        # Check for Docker
+        check_dependency("apt install docker.io -y")
+
     parser = argparse.ArgumentParser(description='Echo your input')
     parser.add_argument('platform', help='What is your platform? win || linux')
     args = parser.parse_args()
