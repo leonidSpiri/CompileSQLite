@@ -146,17 +146,17 @@ def job(is_linux_build=True, run_docker=True):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Echo your input')
+    parser.add_argument('platform', help='What is your platform? win || linux')
+    parser.add_argument('--run-docker', '-t', help='Run docker container with compiled SQLite', action='store_true')
+    args = parser.parse_args()
+
     if check_dependency("apt --version"):
         # Check for Python3-requests
         check_dependency("apt-get install python3-requests -y")
 
         # Check for CMake
         check_dependency("apt install cmake -y")
-
-    parser = argparse.ArgumentParser(description='Echo your input')
-    parser.add_argument('platform', help='What is your platform? win || linux')
-    parser.add_argument('--run-docker', '-t', help='Run docker container with compiled SQLite', action='store_true')
-    args = parser.parse_args()
 
     if args.platform == "win":
         job(is_linux_build=False, run_docker=args.run_docker)
