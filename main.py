@@ -61,10 +61,30 @@ def compile_to_linux():
 
 
 def create_docker_file():
-    dockerfile_content = """FROM gcc:latest
+    dockerfile_content = """# Dockerfile
+FROM gcc:latest
+
+# Install CMake
+RUN apt-get update && apt-get install -y cmake
+
 WORKDIR /app
-COPY . .
-RUN cd build_linux && cmake .. && make
+
+# Create a build directory outside of the source directory
+WORKDIR /build_linux
+
+# Copy only the necessary files for CMake configuration
+COPY CMakeLists.txt /build_linux/
+COPY sqlite3.c /build_linux/
+
+# Run cmake from the build directory
+RUN cmake /build_linux
+
+# Build the project
+RUN make
+
+# Reset the working directory to /app
+WORKDIR /app
+
 CMD ["bash"]"""
     with open("Dockerfile", "w") as dockerfile:
         dockerfile.write(dockerfile_content)
