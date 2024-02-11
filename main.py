@@ -151,6 +151,9 @@ if __name__ == '__main__':
     parser.add_argument('--run-docker', '-t', help='Run docker container with compiled SQLite', action='store_true')
     args = parser.parse_args()
 
+    if os.geteuid() != 0:
+        exit("You need to have root privileges to run this script.\nPlease try again, this time using 'sudo'. Exiting.")
+
     if check_dependency("apt --version"):
         # Check for Python3-requests
         check_dependency("apt-get install python3-requests -y")
