@@ -64,10 +64,15 @@ def create_docker_file():
     dockerfile_content = """FROM gcc:latest
 WORKDIR /app
 COPY . .
-RUN mkdir build_linux && cd build_linux && cmake .. && make
+RUN cd build_linux && cmake .. && make
 CMD ["bash"]"""
     with open("Dockerfile", "w") as dockerfile:
         dockerfile.write(dockerfile_content)
+
+
+def run_docker_container():
+    subprocess.run("docker build -t sqlite_builder .", shell=True)
+    subprocess.run("docker run -it --name sqlite_container sqlite_builder", shell=True)
 
 
 def create_virtual_machine():
@@ -93,7 +98,7 @@ def create_virtual_machine():
         subprocess.run(command, shell=True)
 
 
-def job(is_linux_build=True):
+def job(is_linux_build=True, run_docker=True):
     print("Starting the job")
     print("Downloading sqlite archive")
     download_sql()
@@ -115,6 +120,10 @@ def job(is_linux_build=True):
     print("Creating virtual machine")
     create_virtual_machine()
 
+    if run_docker:
+        print("Running docker container")
+        run_docker_container()
+
 
 if __name__ == '__main__':
     if check_dependency("apt --version"):
@@ -124,14 +133,12 @@ if __name__ == '__main__':
         # Check for CMake
         check_dependency("apt install cmake -y")
 
-        # Check for Docker
-        check_dependency("apt install docker.io -y")
-
     parser = argparse.ArgumentParser(description='Echo your input')
     parser.add_argument('platform', help='What is your platform? win || linux')
+    parser.add_argument('--run-docker', '-t', help='Run docker container with compiled SQLite', action='store_true')
     args = parser.parse_args()
 
     if args.platform == "win":
-        job(is_linux_build=False)
+        job(is_linux_build=False, run_docker=args.run_docker)
     else:
-        job(is_linux_build=True)
+        job(is_linux_build=True, run_docker=args.run_docker)
